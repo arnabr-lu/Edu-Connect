@@ -400,7 +400,7 @@ public class Registration extends AppCompatActivity {
                 client.newCall(request).enqueue(new Callback() {
                     @Override
                     public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                        System.out.println("HK fail: "+e.getMessage());
+                        System.out.println("HK fail:  "+e.getMessage());
                         e.printStackTrace();
                         System.out.println("HK fail1: "+e.getMessage());
                     }
