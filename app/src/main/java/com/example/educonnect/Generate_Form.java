@@ -19,9 +19,11 @@ import com.google.ai.client.generativeai.GenerativeModel;
 import com.google.ai.client.generativeai.java.GenerativeModelFutures;
 import com.google.ai.client.generativeai.type.Content;
 import com.google.ai.client.generativeai.type.GenerateContentResponse;
+import com.google.ai.client.generativeai.type.GenerationConfig;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.gson.Gson;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -86,8 +88,13 @@ public class Generate_Form extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         String key = "AIzaSyAZJnHDozsRK7rkMl-nT5bKT7ZT1G6Fn3c";
-
-        GenerativeModel gm = new GenerativeModel( "gemini-1.5-flash", key);
+        GenerationConfig.Builder configBuilder = new GenerationConfig.Builder();
+        configBuilder.responseMimeType = "application/json";
+        GenerationConfig generationConfig = configBuilder.build();
+        GenerativeModel gm = new GenerativeModel(
+                "gemini-1.5-flash",
+                key,
+                generationConfig);
 
         GenerativeModelFutures model = GenerativeModelFutures.from(gm);
 
@@ -113,7 +120,7 @@ public class Generate_Form extends Fragment {
                 FragmentManager fragmentManager = activity.getSupportFragmentManager();
 
                 Content content = new Content.Builder()
-                        .addText("My name is Arnab. my background is computer science and engineering from leading university. application subject is: '"+title+"' and some text has provided about this application. text is: '"+body+"' now provide an formal application for me. ")
+                        .addText("My name is Arnab. my background is computer science and engineering from leading university. application subject is: '"+title+"' and some text has provided about this application. text is: '"+body+"' now provide an formal application for me. but the result should be in json format object. object attribute should be like this 'subject', 'body', 'to', 'from' etc. just provide json data don't provide any exception information like explanation etc. just only provide json data text.")
                         .build();
 
                 ListenableFuture<GenerateContentResponse> response = model.generateContent(content);
@@ -124,11 +131,14 @@ public class Generate_Form extends Fragment {
 
                         ApplicationActivity.applicationBody = resultText;
                         System.out.println(resultText);
+                        Gson gson = new Gson();
+                        ApplicationData applicationData = gson.fromJson(resultText, ApplicationData.class);
+                        ApplicationActivity.applicationData = applicationData;
+                        System.out.println("HK title: "+applicationData.getSubject());
                         fragmentManager.beginTransaction()
                                 .replace(R.id.nav_host_fragment_content_main_drawer, frgmnt) // Replace with your container ID
                                 .addToBackStack(null)
                                 .commit();
-//                Toast.makeText(getActivity(), "Hare Krishna", Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
@@ -136,21 +146,7 @@ public class Generate_Form extends Fragment {
                         t.printStackTrace();
                     }
                 }, executor);
-
-
-
-
             }
         });
-
-
-
-
-
-
-
-
-
-
     }
 }

@@ -5,24 +5,9 @@ import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.PopupMenu;
-import android.widget.Toast;
-
-import com.google.ai.client.generativeai.GenerativeModel;
-import com.google.ai.client.generativeai.java.GenerativeModelFutures;
-import com.google.ai.client.generativeai.type.Content;
-import com.google.ai.client.generativeai.type.GenerateContentResponse;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -33,6 +18,7 @@ public class ApplicationActivity extends Fragment {
 
 
     public static String applicationBody = "";
+    public static ApplicationData applicationData;
 
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -99,8 +85,14 @@ public class ApplicationActivity extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
 
+        EditText to = view.findViewById(R.id.applicationTo);
+        EditText subject = view.findViewById(R.id.applicationSubject);
         EditText body = view.findViewById(R.id.applicationBody);
-        body.setText(applicationBody);
+
+
+        to.setText(applicationData.getTo());
+        subject.setText(applicationData.getSubject());
+        body.setText(applicationData.getBody());
 
 //        FloatingActionButton fab = view.findViewById(R.id.application_decision);
 //        fab.setOnClickListener(new View.OnClickListener() {

@@ -30,7 +30,7 @@ public class ApplicationListAdapter extends RecyclerView.Adapter<ApplicationList
 
     @Override
     public void onBindViewHolder(@NonNull ApplicationListAdapter.MyViewHolder holder, int position) {
-        holder.title.setText(data.get(position).getTitle());
+        holder.title.setText(data.get(position).getSubject());
         holder.content.setText(data.get(position).getBody());
     }
 

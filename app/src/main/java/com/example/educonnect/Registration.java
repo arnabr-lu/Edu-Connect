@@ -1,12 +1,19 @@
 package com.example.educonnect;
 
+import android.content.Context;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 
 import com.bumptech.glide.Glide;
+import com.example.educonnect.ImgBbObj.Users;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.snackbar.Snackbar;
@@ -16,10 +23,14 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,17 +43,28 @@ import com.example.educonnect.databinding.ActivityRegistrationBinding;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.gson.Gson;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -58,12 +80,15 @@ public class Registration extends AppCompatActivity {
     String uploadUrl = "https://api.imgbb.com/1/upload";
     Bitmap bitmap;
     byte[] imageBytes;
+    Context context;
+    String SelectedImagePath;
+
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        context = getApplicationContext();
         mAuth = FirebaseAuth.getInstance();
 
         binding = ActivityRegistrationBinding.inflate(getLayoutInflater());
@@ -83,10 +108,35 @@ public class Registration extends AppCompatActivity {
             }
         });
 
+
+
+        Spinner userTypeS = findViewById(R.id.userType);
+        String[] items = {"Student", "Teacher"};
+        final String[] userType = new String[1];
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, items);
+        userTypeS.setAdapter(adapter);
+        userTypeS.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                userType[0] = parent.getItemAtPosition(position).toString();
+//                Toast.makeText(MainActivity.this, "Selected: " + selectedItem, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // Handle nothing selected
+            }
+        });
+
+
+
+
         EditText nameEdit = (EditText) findViewById(R.id.nameInput);
         EditText numberEdit = (EditText)  findViewById(R.id.numberInput);
         EditText emailEdit = (EditText)  findViewById(R.id.emailInput);
         EditText passwordEdit = (EditText)  findViewById(R.id.passwordInput);
+        EditText deptEdit = (EditText) findViewById(R.id.deptInput);
+
 
 
 
@@ -113,7 +163,9 @@ public class Registration extends AppCompatActivity {
                 String number = numberEdit.getText().toString();
                 String email = emailEdit.getText().toString();
                 String password = passwordEdit.getText().toString();
+                String dept = deptEdit.getText().toString();
                 System.out.println("HK: register button clicked!");
+
 
                 mAuth.createUserWithEmailAndPassword(email, password)
                         .addOnCompleteListener(Registration.this, new OnCompleteListener<AuthResult>() {
@@ -121,146 +173,87 @@ public class Registration extends AppCompatActivity {
                             public void onComplete(@NonNull Task<AuthResult> task) {
 
                                 if (task.isSuccessful()) {
-                                    register.setText("Register");
                                     Toast.makeText(Registration.this, "Authentication succed. Now Please LogIn",
                                             Toast.LENGTH_SHORT).show();
-                                    FirebaseUser user = mAuth.getCurrentUser();
-                                    System.out.println("HK: registration succed!");
+                                    FirebaseUser     user = mAuth.getCurrentUser();
                                     try {
                                         if (bitmap == null) {
                                             // Handle the case where no image is selected
                                             Toast.makeText(Registration.this, "No image selected", Toast.LENGTH_SHORT).show();
                                             return;
                                         }
-//                                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-//                                        byte[] imageData = baos.toByteArray();
-//
-//
-//                                        ByteArrayOutputStream baods = new ByteArrayOutputStream();
-//                                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
-//                                        byte[] imageBytes  = baos.toByteArray();
 
 
-                                        System.out.println("HK: image dta: ");
-                                        System.out.println(imageBytes);
+                                        //Image upload start
+                                        File imageFile = new File(SelectedImagePath);
+                                        if (imageFile.exists()) {
+                                            System.out.println("File exists");
+                                        } else {
+                                            System.out.println("File not exists");
+                                        }
 
-//                                        String encodedImage = convertBitmapToBase64(bitmap);
-//
-//
-//                                        JSONObject jsonObject = new JSONObject();
-//                                        jsonObject.put("image", encodedImage);
-//
-//                                        // Create request body
-//                                        MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
-//                                        RequestBody requestBody = RequestBody.create(mediaType, jsonObject.toString());
-
-
-
-
-
-                                        // Create the request body
-                                        RequestBody requestBody = RequestBody.create(MediaType.parse("image/jpeg"), imageBytes);
-
-                                        // Build the request
-
+                                        RequestBody requestBody = new MultipartBody.Builder()
+                                                .setType(MultipartBody.FORM)
+                                                .addFormDataPart("image", "image.png",
+                                                        RequestBody.create(MediaType.parse("image/png"), imageFile))
+                                                .build();
                                         OkHttpClient client = new OkHttpClient();
                                         Request request = new Request.Builder()
-                                                .url("https://api.imgbb.com/1/upload?expiration=600&key=561ad6465766a7fc88a1dcd9efdb55eb")
+                                                .url("https://api.imgbb.com/1/upload?expiration=3600&key=561ad6465766a7fc88a1dcd9efdb55eb")
                                                 .post(requestBody)
                                                 .build();
+                                        client.newCall(request).enqueue(new Callback() {
+                                            @Override
+                                            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                                                System.out.println("HK fail:  "+e.getMessage());
+                                                e.printStackTrace();
+                                            }
 
+                                            @Override
+                                            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        try {
+                                                            String d = response.body().string();
+                                                            JSONObject jsonObject = new JSONObject(d);
+                                                            JSONObject dataObject = jsonObject.getJSONObject("data");
+                                                            String imageUrl = dataObject.getString("url");
+                                                            FirebaseFirestore db = FirebaseFirestore.getInstance();
+                                                            Users usr = new Users(user.getUid(), imageUrl, name, number, dept, email, userType[0]);
+                                                            Gson gson = new Gson();
+                                                            String json = gson.toJson(usr);
+                                                            db.collection("users").document(user.getUid()).set(usr)
+                                                                    .addOnSuccessListener(documentReference -> {
+                                                                        System.out.println("HK success db: "+documentReference);
+                                                                        register.setText("Register");
+                                                                        Intent intent = new Intent(Registration.this, MainDrawer.class);
+                                                                        startActivity(intent);
+                                                                    })
+                                                                    .addOnFailureListener(e -> {
+                                                                        System.out.println("HK failure db: "+e);
 
-//                                        client.newCall(request).enqueue(new Callback() {
-//                                            @Override
-//                                            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-//                                                System.out.println("HK on failure: "+e.getMessage());
-//                                                e.printStackTrace();
-//                                            }
-//
-//                                            @Override
-//                                            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-//                                                runOnUiThread(new Runnable() {
-//                                                    @Override
-//                                                    public void run() {
-//                                                        try {
-//                                                            System.out.println("HK: "+response.body().string());
-//                                                        } catch (IOException e) {
-//                                                            System.out.println("HK: from on response "+response.body());
-//                                                            throw new RuntimeException(e);
-//                                                        }
-//                                                    }
-//                                                });
-//                                            }
-//                                        });
+                                                                    });
 
-
-
-
-//                                        Executor execute = Executors.newSingleThreadExecutor();
-//                                        execute.execute(new Runnable() {
-//                                            @Override
-//                                            public void run()
-//                                            {
-//                                                try {
-//                                                    Response response = client.newCall(request).execute();
-//                                                    if (response.isSuccessful()) {
-//                                                         String sc = response.body().string();
-//                                                        System.out.println("HK: "+sc);
-//                                                        Toast.makeText(Registration.this, "HK succed", Toast.LENGTH_SHORT).show();
-//
-//                                                    } else {
-//                                                         String er = "Upload failed: " + response.code();
-//                                                         System.out.println("HB: "+er);
-//                                                        Toast.makeText(Registration.this, "HK failed", Toast.LENGTH_SHORT).show();
-//
-//                                                    }
-//                                                }catch (Exception e)
-//                                                {
-//                                                    System.out.println("HKe: "+e);
-//                                                    Toast.makeText(Registration.this, "asdf "+e, Toast.LENGTH_SHORT).show();
-//                                                }
-//                                            }
-//                                        });
-
-
-//                                        try (Response response = client.newCall(request).execute()) {
-//                                            if (response.isSuccessful()) {
-//                                                 String sc = response.body().string();
-//                                                System.out.println("HK: "+sc);
-//                                                Toast.makeText(Registration.this, "HK succed", Toast.LENGTH_SHORT).show();
-//
-//                                            } else {
-//                                                 String er = "Upload failed: " + response.code();
-//                                                 System.out.println("HB: "+er);
-//                                                Toast.makeText(Registration.this, "HK failed", Toast.LENGTH_SHORT).show();
-//
-//                                            }
-//                                        }catch (Exception e)
-//                                        {
-//                                            System.out.println("HKe: "+e);
-//                                            Toast.makeText(Registration.this, "asdf "+e, Toast.LENGTH_SHORT).show();
-//                                        }
-
+                                                        } catch (IOException | JSONException e) {
+                                                            System.out.println("HK:catch "+e.getMessage());
+                                                            throw new RuntimeException(e);
+                                                        }
+                                                        catch (Exception e)
+                                                        {
+                                                            System.out.println(e);
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        });
                                     }
-
                                     catch (Exception e) {
                                         String er = "Upload failed: " + e.getMessage();
                                         System.out.println("HB: "+er);
-
                                     }
-
-
-
-
-
-
-
-
                                 } else {
                                     register.setText("Register");
-
-                                    // If sign in fails, display a message to the user.
                                     System.out.println("createUserWithEmail:failure"+task.getException());
                                     Toast.makeText(Registration.this, "Authentication failed.",
                                             Toast.LENGTH_SHORT).show();
@@ -274,57 +267,33 @@ public class Registration extends AppCompatActivity {
 
 
 
-//    public static void uploadImage(Bitmap image, String apiKey, String uploadUrl, OnImageUploadListener listener) {
-//        // Convert bitmap to byte array (you can choose other formats if needed)
-//        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//        image.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-//        byte[] imageData = baos.toByteArray();
-//
-//
-//        // Create the request body
-//        RequestBody requestBody = RequestBody.create(MediaType.parse("image/jpeg"), imageData);
-//
-//        // Build the request
-//        OkHttpClient client = new OkHttpClient();
-//        Request request = new Request.Builder()
-//                .url(uploadUrl)
-//                .addHeader("Authorization", "Client-ID " + apiKey) // Add your API key
-//                .post(requestBody)
-//                .build();
-//
-//        // Make the asynchronous request
-//        client.newCall(request).enqueue(new Callback() {
-//            @Override
-//            public void onFailure(Call call, IOException e) {
-//                if (listener != null) {
-//                    listener.onUploadError(e.getMessage());
-//
-//                }
-//            }
-//
-//            @Override
-//            public void onResponse(Call call, Response response) throws IOException {
-//                if (response.isSuccessful()) {
-//                    String
-//                    responseString = response.body().string();
-//
-//                    if (listener != null) {
-//                        listener.onUploadSuccess(responseString); // Parse the response to get image URL
-//                    }
-//                } else {
-//                    if (listener != null) {
-//                        listener.onUploadError("Upload failed: " + response.code());
-//                    }
-//                }
-//            }
-//        });
-//    }
 
 
 
 
+    private String getImagePathFromUri(Uri uri) {
+        String[] projection = {MediaStore.Images.Media.DATA};
+        CursorLoader cursorLoader = new CursorLoader(
+                context,
+                uri,
+                projection,
+                null,
+                null,
+                null
+        );
 
+        Cursor cursor = cursorLoader.loadInBackground();
 
+        String imagePath = null;
+        if (cursor != null) {
+            int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            cursor.moveToFirst();
+            imagePath = cursor.getString(columnIndex);
+            cursor.close();
+        }
+
+        return imagePath;
+    }
 
 
 
@@ -333,121 +302,16 @@ public class Registration extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
+
             Uri selectedImageUri = data.getData();
-
-
-
-
 
             try {
                 bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), selectedImageUri);
-
                 upldImg.setImageBitmap(bitmap);
-
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-                imageBytes  = baos.toByteArray();
-                System.out.println("HK: image dta: ");
-                System.out.println(imageBytes);
-
-//                RequestBody requestBody = RequestBody.create(MediaType.parse("image/jpeg"), imageBytes);
-//
-//                // Build the request
-//
-                OkHttpClient client = new OkHttpClient();
-
-
-
-
-
-                String encodedImage = convertBitmapToBase64(bitmap);
-
-
-                JSONObject jsonObject = new JSONObject();
-                jsonObject.put("image", encodedImage);
-
-                // Create request body
-                MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
-                RequestBody requestBody = RequestBody.create(mediaType, jsonObject.toString());
-
-
-
-
-                Request request = new Request.Builder()
-                        .url("https://api.imgbb.com/1/upload?expiration=600&key=561ad6465766a7fc88a1dcd9efdb55eb")
-                        .post(requestBody)
-                        .build();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                client.newCall(request).enqueue(new Callback() {
-                    @Override
-                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                        System.out.println("HK fail:  "+e.getMessage());
-                        e.printStackTrace();
-                        System.out.println("HK fail1: "+e.getMessage());
-                    }
-
-                    @Override
-                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    System.out.println("HK:responseon "+response.body().string());
-                                } catch (IOException e) {
-                                    System.out.println("HK:catch "+e.getMessage());
-                                    throw new RuntimeException(e);
-                                }
-                            }
-                        });
-                    }
-                });
-
-
-                // Here, you can upload the bitmap to a server using a network library
-                // ...
+                SelectedImagePath = getImagePathFromUri(selectedImageUri);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
-
-
-    private Uri getImageUri(Bitmap inImage) {
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        inImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
-        String path = MediaStore.Images.Media.insertImage(getContentResolver(), inImage, "Title", null);
-        return Uri.parse(path);
-    }
-
-
-
-    public static String convertBitmapToBase64(Bitmap bitmap) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.JPEG,100, baos);
-        byte[] imageBytes = baos.toByteArray();
-        String encodedImage = Base64.encodeToString(imageBytes, Base64.DEFAULT);
-        return encodedImage;
-
-    }
 }
-
-

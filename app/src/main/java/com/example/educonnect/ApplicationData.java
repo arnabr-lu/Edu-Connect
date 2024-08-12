@@ -3,26 +3,30 @@ package com.example.educonnect;
 
 public class ApplicationData {
 
-    private String title;
+    private String subject;
     private String body;
     private String to;
     private String from;
     private String attachment;
 
-    public ApplicationData(String title, String body, String to, String from, String attachment) {
-        this.title = title;
+    public ApplicationData(String subject, String body, String to, String from, String attachment) {
+        this.subject = subject;
         this.body = body;
         this.to = to;
         this.from = from;
         this.attachment = attachment;
     }
 
-    public String getTitle() {
-        return title;
+    public ApplicationData() {
+
     }
 
-    public void setTitle(String title) {
-        this.title = title;
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
     }
 
     public String getBody() {

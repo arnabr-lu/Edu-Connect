@@ -5,8 +5,12 @@ import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Menu;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.example.educonnect.ImgBbObj.Users;
 import com.example.educonnect.ui.home.HomeFragment;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
@@ -31,6 +35,7 @@ public class MainDrawer extends AppCompatActivity {
 
     private AppBarConfiguration mAppBarConfiguration;
     private ActivityMainDrawer2Binding binding;
+    public static Users user;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +55,18 @@ public class MainDrawer extends AppCompatActivity {
 //        });
         DrawerLayout drawer = binding.drawerLayout;
         NavigationView navigationView = binding.navView;
+        View headerView = navigationView.getHeaderView(0);
+
+        ImageView drawerImage = headerView.findViewById(R.id.headerImg);
+        TextView drawerName = headerView.findViewById(R.id.headerTitle);
+//
+//
+//// Set image and name
+        Glide.with(this)
+                .load(user.uid)
+                .into(drawerImage);
+//        drawerImage.setImageResource(R.drawable.);
+        drawerName.setText(user.name);
 
 
 
@@ -126,8 +143,4 @@ public class MainDrawer extends AppCompatActivity {
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
     }
-
-
-
-
 }
